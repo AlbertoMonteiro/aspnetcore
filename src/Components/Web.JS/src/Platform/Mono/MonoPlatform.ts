@@ -52,8 +52,8 @@ export const monoPlatform: Platform = {
     });
   },
 
-  callEntryPoint: async function callEntryPoint(assemblyName: string) : Promise<any> {
-    const emptyArray = [ [ ] ];
+  callEntryPoint: async function callEntryPoint(assemblyName: string): Promise<any> {
+    const emptyArray = [[]];
 
     try {
       await BINDING.call_assembly_entry_point(assemblyName, emptyArray, "m")
@@ -421,11 +421,11 @@ function createEmscriptenModuleInstance(resourceLoader: WebAssemblyResourceLoade
     resourceLoader.purgeUnusedCacheEntriesAsync(); // Don't await - it's fine to run in background
 
     if (resourceLoader.bootConfig.icuDataMode === ICUDataMode.Sharded) {
-      MONO.mono_wasm_setenv('__BLAZOR_SHARDED_ICU',  '1');
+      MONO.mono_wasm_setenv('__BLAZOR_SHARDED_ICU', '1');
 
       if (resourceLoader.startOptions.applicationCulture) {
         // If a culture is specified via start options use that to initialize the Emscripten \  .NET culture.
-        MONO.mono_wasm_setenv('LANG',  `${resourceLoader.startOptions.applicationCulture}.UTF-8`);
+        MONO.mono_wasm_setenv('LANG', `${resourceLoader.startOptions.applicationCulture}.UTF-8`);
       }
     }
     let timeZone = "UTC";
@@ -495,10 +495,10 @@ function bindStaticMethod(assembly: string, typeName: string, method: string) {
 
 export let byteArrayBeingTransferred: Uint8Array | null = null;
 function attachInteropInvoker(): void {
-  const dotNetDispatcherInvokeMethodHandle = bindStaticMethod('BlazorApp1', 'BlazorApp1.Helpers', 'RegexMatches');
-    // const dotNetDispatcherBeginInvokeMethodHandle = bindStaticMethod('Microsoft.AspNetCore.Components.WebAssembly', 'Microsoft.AspNetCore.Components.WebAssembly.Services.DefaultWebAssemblyJSRuntime', 'BeginInvokeDotNet');
-    // const dotNetDispatcherEndInvokeJSMethodHandle = bindStaticMethod('Microsoft.AspNetCore.Components.WebAssembly', 'Microsoft.AspNetCore.Components.WebAssembly.Services.DefaultWebAssemblyJSRuntime', 'EndInvokeJS');
-    // const dotNetDispatcherNotifyByteArrayAvailableMethodHandle = bindStaticMethod('Microsoft.AspNetCore.Components.WebAssembly', 'Microsoft.AspNetCore.Components.WebAssembly.Services.DefaultWebAssemblyJSRuntime', 'NotifyByteArrayAvailable');
+  // const dotNetDispatcherInvokeMethodHandle = bindStaticMethod('BlazorApp1', 'BlazorApp1.Helpers', 'RegexMatches');
+  // const dotNetDispatcherBeginInvokeMethodHandle = bindStaticMethod('Microsoft.AspNetCore.Components.WebAssembly', 'Microsoft.AspNetCore.Components.WebAssembly.Services.DefaultWebAssemblyJSRuntime', 'BeginInvokeDotNet');
+  // const dotNetDispatcherEndInvokeJSMethodHandle = bindStaticMethod('Microsoft.AspNetCore.Components.WebAssembly', 'Microsoft.AspNetCore.Components.WebAssembly.Services.DefaultWebAssemblyJSRuntime', 'EndInvokeJS');
+  // const dotNetDispatcherNotifyByteArrayAvailableMethodHandle = bindStaticMethod('Microsoft.AspNetCore.Components.WebAssembly', 'Microsoft.AspNetCore.Components.WebAssembly.Services.DefaultWebAssemblyJSRuntime', 'NotifyByteArrayAvailable');
 
   DotNet.attachDispatcher({
     beginInvokeDotNetFromJS: (callId: number, assemblyName: string | null, methodIdentifier: string, dotNetObjectId: any | null, argsJson: string): void => {
@@ -515,7 +515,9 @@ function attachInteropInvoker(): void {
     invokeDotNetFromJS: (assemblyName, methodIdentifier, dotNetObjectId, argsJson) => {
       assertHeapIsNotLocked();
       var args = JSON.parse(argsJson);
-      return dotNetDispatcherInvokeMethodHandle(args[0], args[1]);
+      const methodParts = methodIdentifier.split(":");
+      const method = bindStaticMethod(assemblyName!.toString(), methodParts[0], methodParts[1])
+      return method(...args);
     },
   });
 }
