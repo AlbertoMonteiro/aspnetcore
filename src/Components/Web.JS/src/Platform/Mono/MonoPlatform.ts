@@ -1,5 +1,5 @@
 import { DotNet } from '@microsoft/dotnet-js-interop';
-import { attachDebuggerHotkey, hasDebuggingEnabled } from './MonoDebugger';
+import { hasDebuggingEnabled } from './MonoDebugger';
 import { showErrorNotification } from '../../BootErrors';
 import { WebAssemblyResourceLoader, LoadingResource } from '../WebAssemblyResourceLoader';
 import { Platform, System_Array, Pointer, System_Object, System_String, HeapLock } from '../Platform';
@@ -37,8 +37,6 @@ function getValueU64(ptr: number) {
 export const monoPlatform: Platform = {
   start: function start(resourceLoader: WebAssemblyResourceLoader) {
     return new Promise<void>((resolve, reject) => {
-      attachDebuggerHotkey(resourceLoader);
-
       // dotnet.js assumes the existence of this
       window['Browser'] = {
         init: () => { },
@@ -497,10 +495,10 @@ function bindStaticMethod(assembly: string, typeName: string, method: string) {
 
 export let byteArrayBeingTransferred: Uint8Array | null = null;
 function attachInteropInvoker(): void {
-  const dotNetDispatcherInvokeMethodHandle = bindStaticMethod('Microsoft.AspNetCore.Components.WebAssembly', 'Microsoft.AspNetCore.Components.WebAssembly.Services.DefaultWebAssemblyJSRuntime', 'InvokeDotNet');
-  const dotNetDispatcherBeginInvokeMethodHandle = bindStaticMethod('Microsoft.AspNetCore.Components.WebAssembly', 'Microsoft.AspNetCore.Components.WebAssembly.Services.DefaultWebAssemblyJSRuntime', 'BeginInvokeDotNet');
-  const dotNetDispatcherEndInvokeJSMethodHandle = bindStaticMethod('Microsoft.AspNetCore.Components.WebAssembly', 'Microsoft.AspNetCore.Components.WebAssembly.Services.DefaultWebAssemblyJSRuntime', 'EndInvokeJS');
-  const dotNetDispatcherNotifyByteArrayAvailableMethodHandle = bindStaticMethod('Microsoft.AspNetCore.Components.WebAssembly', 'Microsoft.AspNetCore.Components.WebAssembly.Services.DefaultWebAssemblyJSRuntime', 'NotifyByteArrayAvailable');
+  const dotNetDispatcherInvokeMethodHandle = bindStaticMethod('BlazorApp1', 'BlazorApp1.Helpers', 'RegexMatches');
+    // const dotNetDispatcherBeginInvokeMethodHandle = bindStaticMethod('Microsoft.AspNetCore.Components.WebAssembly', 'Microsoft.AspNetCore.Components.WebAssembly.Services.DefaultWebAssemblyJSRuntime', 'BeginInvokeDotNet');
+    // const dotNetDispatcherEndInvokeJSMethodHandle = bindStaticMethod('Microsoft.AspNetCore.Components.WebAssembly', 'Microsoft.AspNetCore.Components.WebAssembly.Services.DefaultWebAssemblyJSRuntime', 'EndInvokeJS');
+    // const dotNetDispatcherNotifyByteArrayAvailableMethodHandle = bindStaticMethod('Microsoft.AspNetCore.Components.WebAssembly', 'Microsoft.AspNetCore.Components.WebAssembly.Services.DefaultWebAssemblyJSRuntime', 'NotifyByteArrayAvailable');
 
   DotNet.attachDispatcher({
     beginInvokeDotNetFromJS: (callId: number, assemblyName: string | null, methodIdentifier: string, dotNetObjectId: any | null, argsJson: string): void => {
@@ -508,34 +506,16 @@ function attachInteropInvoker(): void {
       if (!dotNetObjectId && !assemblyName) {
         throw new Error('Either assemblyName or dotNetObjectId must have a non null value.');
       }
-      // As a current limitation, we can only pass 4 args. Fortunately we only need one of
-      // 'assemblyName' or 'dotNetObjectId', so overload them in a single slot
-      const assemblyNameOrDotNetObjectId: string = dotNetObjectId
-        ? dotNetObjectId.toString()
-        : assemblyName;
-
-      dotNetDispatcherBeginInvokeMethodHandle(
-        callId ? callId.toString() : null,
-        assemblyNameOrDotNetObjectId,
-        methodIdentifier,
-        argsJson,
-      );
     },
     endInvokeJSFromDotNet: (asyncHandle, succeeded, serializedArgs): void => {
-      dotNetDispatcherEndInvokeJSMethodHandle(serializedArgs);
     },
     sendByteArray: (id: number, data: Uint8Array): void => {
       byteArrayBeingTransferred = data;
-      dotNetDispatcherNotifyByteArrayAvailableMethodHandle(id);
     },
     invokeDotNetFromJS: (assemblyName, methodIdentifier, dotNetObjectId, argsJson) => {
       assertHeapIsNotLocked();
-      return dotNetDispatcherInvokeMethodHandle(
-        assemblyName ? assemblyName : null,
-        methodIdentifier,
-        dotNetObjectId ? dotNetObjectId.toString() : null,
-        argsJson,
-      ) as string;
+      var args = JSON.parse(argsJson);
+      return dotNetDispatcherInvokeMethodHandle(args[0], args[1]);
     },
   });
 }
