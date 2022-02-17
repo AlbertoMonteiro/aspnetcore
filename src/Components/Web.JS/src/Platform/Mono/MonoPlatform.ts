@@ -171,7 +171,7 @@ function addScriptTagsToDocument(resourceLoader: WebAssemblyResourceLoader) {
     .filter(n => n.startsWith('dotnet.') && n.endsWith('.js'))[0];
   const dotnetJsContentHash = resourceLoader.bootConfig.resources.runtime[dotnetJsResourceName];
   const scriptElem = document.createElement('script');
-  scriptElem.src = `_framework/${dotnetJsResourceName}`;
+  scriptElem.src = `static/${dotnetJsResourceName}`;
   scriptElem.defer = true;
 
   // For consistency with WebAssemblyResourceLoader, we only enforce SRI if caching is allowed
@@ -234,11 +234,11 @@ function createEmscriptenModuleInstance(resourceLoader: WebAssemblyResourceLoade
 
   // Begin loading the .dll/.pdb/.wasm files, but don't block here. Let other loading processes run in parallel.
   const dotnetWasmResourceName = 'dotnet.wasm';
-  const assembliesBeingLoaded = resourceLoader.loadResources(resources.assembly, filename => `_framework/${filename}`, 'assembly');
-  const pdbsBeingLoaded = resourceLoader.loadResources(resources.pdb || {}, filename => `_framework/${filename}`, 'pdb');
+  const assembliesBeingLoaded = resourceLoader.loadResources(resources.assembly, filename => `static/${filename}`, 'assembly');
+  const pdbsBeingLoaded = resourceLoader.loadResources(resources.pdb || {}, filename => `static/${filename}`, 'pdb');
   const wasmBeingLoaded = resourceLoader.loadResource(
     /* name */ dotnetWasmResourceName,
-    /* url */  `_framework/${dotnetWasmResourceName}`,
+    /* url */  `static/${dotnetWasmResourceName}`,
     /* hash */ resourceLoader.bootConfig.resources.runtime[dotnetWasmResourceName],
     /* type */ 'dotnetwasm');
 
@@ -247,7 +247,7 @@ function createEmscriptenModuleInstance(resourceLoader: WebAssemblyResourceLoade
   if (resourceLoader.bootConfig.resources.runtime.hasOwnProperty(dotnetTimeZoneResourceName)) {
     timeZoneResource = resourceLoader.loadResource(
       dotnetTimeZoneResourceName,
-      `_framework/${dotnetTimeZoneResourceName}`,
+      `static/${dotnetTimeZoneResourceName}`,
       resourceLoader.bootConfig.resources.runtime[dotnetTimeZoneResourceName],
       'globalization');
   }
@@ -258,7 +258,7 @@ function createEmscriptenModuleInstance(resourceLoader: WebAssemblyResourceLoade
     const icuDataResourceName = getICUResourceName(resourceLoader.bootConfig, applicationCulture);
     icuDataResource = resourceLoader.loadResource(
       icuDataResourceName,
-      `_framework/${icuDataResourceName}`,
+      `static/${icuDataResourceName}`,
       resourceLoader.bootConfig.resources.runtime[icuDataResourceName],
       'globalization');
   }
@@ -320,7 +320,7 @@ function createEmscriptenModuleInstance(resourceLoader: WebAssemblyResourceLoade
       if (satelliteResources) {
         const resourcePromises = Promise.all(culturesToLoad
           .filter(culture => satelliteResources.hasOwnProperty(culture))
-          .map(culture => resourceLoader.loadResources(satelliteResources[culture], fileName => `_framework/${fileName}`, 'assembly'))
+          .map(culture => resourceLoader.loadResources(satelliteResources[culture], fileName => `static/${fileName}`, 'assembly'))
           .reduce((previous, next) => previous.concat(next), new Array<LoadingResource>())
           .map(async resource => (await resource.response).arrayBuffer()));
 
@@ -367,13 +367,13 @@ function createEmscriptenModuleInstance(resourceLoader: WebAssemblyResourceLoade
         const pdbsToLoad = assembliesMarkedAsLazy.map(a => changeExtension(a, '.pdb'))
         if (pdbs) {
           pdbPromises = Promise.all(pdbsToLoad
-            .map(pdb => lazyAssemblies.hasOwnProperty(pdb) ? resourceLoader.loadResource(pdb, `_framework/${pdb}`, lazyAssemblies[pdb], 'pdb') : null)
+            .map(pdb => lazyAssemblies.hasOwnProperty(pdb) ? resourceLoader.loadResource(pdb, `static/${pdb}`, lazyAssemblies[pdb], 'pdb') : null)
             .map(async resource => resource ? (await resource.response).arrayBuffer() : null));
         }
       }
 
       const resourcePromises = Promise.all(assembliesMarkedAsLazy
-        .map(assembly => resourceLoader.loadResource(assembly, `_framework/${assembly}`, lazyAssemblies[assembly], 'assembly'))
+        .map(assembly => resourceLoader.loadResource(assembly, `static/${assembly}`, lazyAssemblies[assembly], 'assembly'))
         .map(async resource => (await resource.response).arrayBuffer()));
 
 
