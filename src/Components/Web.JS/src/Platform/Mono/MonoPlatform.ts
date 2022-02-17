@@ -5,7 +5,7 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 /* eslint-disable no-prototype-builtins */
 import { DotNet } from '@microsoft/dotnet-js-interop';
-import { attachDebuggerHotkey, hasDebuggingEnabled } from './MonoDebugger';
+import { hasDebuggingEnabled } from './MonoDebugger';
 import { showErrorNotification } from '../../BootErrors';
 import { WebAssemblyResourceLoader, LoadingResource } from '../WebAssemblyResourceLoader';
 import { Platform, System_Array, Pointer, System_Object, System_String, HeapLock } from '../Platform';
@@ -51,8 +51,6 @@ function getValueU64(ptr: number) {
 
 export const monoPlatform: Platform = {
   start: async function start(resourceLoader: WebAssemblyResourceLoader) {
-    attachDebuggerHotkey(resourceLoader);
-
     await createEmscriptenModuleInstance(resourceLoader);
   },
 
@@ -144,13 +142,13 @@ export const monoPlatform: Platform = {
     return ((baseAddress as any as number) + (fieldOffset || 0)) as any as T;
   },
 
-  beginHeapLock: function() {
+  beginHeapLock: function () {
     assertHeapIsNotLocked();
     currentHeapLock = new MonoHeapLock();
     return currentHeapLock;
   },
 
-  invokeWhenHeapUnlocked: function(callback) {
+  invokeWhenHeapUnlocked: function (callback) {
     // This is somewhat like a sync context. If we're not locked, just pass through the call directly.
     if (!currentHeapLock) {
       callback();
@@ -174,7 +172,7 @@ async function importDotnetJs(resourceLoader: WebAssemblyResourceLoader): Promis
     .keys(resourceLoader.bootConfig.resources.runtime)
     .filter(n => n.startsWith('dotnet.') && n.endsWith('.js'))[0];
   const dotnetJsContentHash = resourceLoader.bootConfig.resources.runtime[dotnetJsResourceName];
-  let src = `_framework/${dotnetJsResourceName}`;
+  let src = `static/${dotnetJsResourceName}`;
 
   // Allow overriding the URI from which the dotnet.*.js file is loaded
   if (resourceLoader.startOptions.loadBootResource) {
@@ -251,11 +249,11 @@ async function createEmscriptenModuleInstance(resourceLoader: WebAssemblyResourc
 
   // Begin loading the .dll/.pdb/.wasm files, but don't block here. Let other loading processes run in parallel.
   const dotnetWasmResourceName = 'dotnet.wasm';
-  const assembliesBeingLoaded = resourceLoader.loadResources(resources.assembly, filename => `_framework/${filename}`, 'assembly');
-  const pdbsBeingLoaded = resourceLoader.loadResources(resources.pdb || {}, filename => `_framework/${filename}`, 'pdb');
+  const assembliesBeingLoaded = resourceLoader.loadResources(resources.assembly, filename => `static/${filename}`, 'assembly');
+  const pdbsBeingLoaded = resourceLoader.loadResources(resources.pdb || {}, filename => `static/${filename}`, 'pdb');
   const wasmBeingLoaded = resourceLoader.loadResource(
     /* name */ dotnetWasmResourceName,
-    /* url */ `_framework/${dotnetWasmResourceName}`,
+    /* url */  `static/${dotnetWasmResourceName}`,
     /* hash */ resourceLoader.bootConfig.resources.runtime[dotnetWasmResourceName],
     /* type */ 'dotnetwasm'
   );
@@ -265,7 +263,7 @@ async function createEmscriptenModuleInstance(resourceLoader: WebAssemblyResourc
   if (resourceLoader.bootConfig.resources.runtime.hasOwnProperty(dotnetTimeZoneResourceName)) {
     timeZoneResource = resourceLoader.loadResource(
       dotnetTimeZoneResourceName,
-      `_framework/${dotnetTimeZoneResourceName}`,
+      `static/${dotnetTimeZoneResourceName}`,
       resourceLoader.bootConfig.resources.runtime[dotnetTimeZoneResourceName],
       'globalization'
     );
@@ -277,7 +275,7 @@ async function createEmscriptenModuleInstance(resourceLoader: WebAssemblyResourc
     const icuDataResourceName = getICUResourceName(resourceLoader.bootConfig, applicationCulture);
     icuDataResource = resourceLoader.loadResource(
       icuDataResourceName,
-      `_framework/${icuDataResourceName}`,
+      `static/${icuDataResourceName}`,
       resourceLoader.bootConfig.resources.runtime[icuDataResourceName],
       'globalization'
     );
@@ -342,7 +340,7 @@ async function createEmscriptenModuleInstance(resourceLoader: WebAssemblyResourc
         if (satelliteResources) {
           const resourcePromises = Promise.all(culturesToLoad!
             .filter(culture => satelliteResources.hasOwnProperty(culture))
-            .map(culture => resourceLoader.loadResources(satelliteResources[culture], fileName => `_framework/${fileName}`, 'assembly'))
+            .map(culture => resourceLoader.loadResources(satelliteResources[culture], fileName => `static/${fileName}`, 'assembly'))
             .reduce((previous, next) => previous.concat(next), new Array<LoadingResource>())
             .map(async resource => (await resource.response).arrayBuffer()));
 
@@ -388,13 +386,13 @@ async function createEmscriptenModuleInstance(resourceLoader: WebAssemblyResourc
           const pdbsToLoad = assembliesMarkedAsLazy.map(a => changeExtension(a, '.pdb'));
           if (pdbs) {
             pdbPromises = Promise.all(pdbsToLoad
-              .map(pdb => lazyAssemblies.hasOwnProperty(pdb) ? resourceLoader.loadResource(pdb, `_framework/${pdb}`, lazyAssemblies[pdb], 'pdb') : null)
+              .map(pdb => lazyAssemblies.hasOwnProperty(pdb) ? resourceLoader.loadResource(pdb, `static/${pdb}`, lazyAssemblies[pdb], 'pdb') : null)
               .map(async resource => resource ? (await resource.response).arrayBuffer() : null));
           }
         }
 
         const resourcePromises = Promise.all(assembliesMarkedAsLazy
-          .map(assembly => resourceLoader.loadResource(assembly, `_framework/${assembly}`, lazyAssemblies[assembly], 'assembly'))
+          .map(assembly => resourceLoader.loadResource(assembly, `static/${assembly}`, lazyAssemblies[assembly], 'assembly'))
           .map(async resource => (await resource.response).arrayBuffer()));
 
 
@@ -529,10 +527,10 @@ function bindStaticMethod(assembly: string, typeName: string, method: string) {
 
 export let byteArrayBeingTransferred: Uint8Array | null = null;
 function attachInteropInvoker(): void {
-  const dotNetDispatcherInvokeMethodHandle = bindStaticMethod('Microsoft.AspNetCore.Components.WebAssembly', 'Microsoft.AspNetCore.Components.WebAssembly.Services.DefaultWebAssemblyJSRuntime', 'InvokeDotNet');
-  const dotNetDispatcherBeginInvokeMethodHandle = bindStaticMethod('Microsoft.AspNetCore.Components.WebAssembly', 'Microsoft.AspNetCore.Components.WebAssembly.Services.DefaultWebAssemblyJSRuntime', 'BeginInvokeDotNet');
-  const dotNetDispatcherEndInvokeJSMethodHandle = bindStaticMethod('Microsoft.AspNetCore.Components.WebAssembly', 'Microsoft.AspNetCore.Components.WebAssembly.Services.DefaultWebAssemblyJSRuntime', 'EndInvokeJS');
-  const dotNetDispatcherNotifyByteArrayAvailableMethodHandle = bindStaticMethod('Microsoft.AspNetCore.Components.WebAssembly', 'Microsoft.AspNetCore.Components.WebAssembly.Services.DefaultWebAssemblyJSRuntime', 'NotifyByteArrayAvailable');
+  // const dotNetDispatcherInvokeMethodHandle = bindStaticMethod('BlazorApp1', 'BlazorApp1.Helpers', 'RegexMatches');
+  // const dotNetDispatcherBeginInvokeMethodHandle = bindStaticMethod('Microsoft.AspNetCore.Components.WebAssembly', 'Microsoft.AspNetCore.Components.WebAssembly.Services.DefaultWebAssemblyJSRuntime', 'BeginInvokeDotNet');
+  // const dotNetDispatcherEndInvokeJSMethodHandle = bindStaticMethod('Microsoft.AspNetCore.Components.WebAssembly', 'Microsoft.AspNetCore.Components.WebAssembly.Services.DefaultWebAssemblyJSRuntime', 'EndInvokeJS');
+  // const dotNetDispatcherNotifyByteArrayAvailableMethodHandle = bindStaticMethod('Microsoft.AspNetCore.Components.WebAssembly', 'Microsoft.AspNetCore.Components.WebAssembly.Services.DefaultWebAssemblyJSRuntime', 'NotifyByteArrayAvailable');
 
   DotNet.attachDispatcher({
     beginInvokeDotNetFromJS: (callId: number, assemblyName: string | null, methodIdentifier: string, dotNetObjectId: any | null, argsJson: string): void => {
@@ -540,34 +538,18 @@ function attachInteropInvoker(): void {
       if (!dotNetObjectId && !assemblyName) {
         throw new Error('Either assemblyName or dotNetObjectId must have a non null value.');
       }
-      // As a current limitation, we can only pass 4 args. Fortunately we only need one of
-      // 'assemblyName' or 'dotNetObjectId', so overload them in a single slot
-      const assemblyNameOrDotNetObjectId: string = dotNetObjectId
-        ? dotNetObjectId.toString()
-        : assemblyName;
-
-      dotNetDispatcherBeginInvokeMethodHandle(
-        callId ? callId.toString() : null,
-        assemblyNameOrDotNetObjectId,
-        methodIdentifier,
-        argsJson,
-      );
     },
     endInvokeJSFromDotNet: (asyncHandle, succeeded, serializedArgs): void => {
-      dotNetDispatcherEndInvokeJSMethodHandle(serializedArgs);
     },
     sendByteArray: (id: number, data: Uint8Array): void => {
       byteArrayBeingTransferred = data;
-      dotNetDispatcherNotifyByteArrayAvailableMethodHandle(id);
     },
     invokeDotNetFromJS: (assemblyName, methodIdentifier, dotNetObjectId, argsJson) => {
       assertHeapIsNotLocked();
-      return dotNetDispatcherInvokeMethodHandle(
-        assemblyName ? assemblyName : null,
-        methodIdentifier,
-        dotNetObjectId ? dotNetObjectId.toString() : null,
-        argsJson,
-      ) as string;
+      var args = JSON.parse(argsJson);
+      const methodParts = methodIdentifier.split(":");
+      const method = bindStaticMethod(assemblyName!.toString(), methodParts[0], methodParts[1])
+      return method(...args);
     },
   });
 }

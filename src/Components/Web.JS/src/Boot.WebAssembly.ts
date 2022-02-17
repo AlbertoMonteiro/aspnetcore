@@ -29,7 +29,7 @@ async function boot(options?: Partial<WebAssemblyStartOptions>): Promise<void> {
   started = true;
 
   if (inAuthRedirectIframe()) {
-    await new Promise(() => {}); // See inAuthRedirectIframe for explanation
+    await new Promise(() => { }); // See inAuthRedirectIframe for explanation
   }
 
   setDispatchEventMiddleware((browserRendererId, eventHandlerId, continuation) => {
@@ -42,12 +42,6 @@ async function boot(options?: Partial<WebAssemblyStartOptions>): Promise<void> {
       monoPlatform.invokeWhenHeapUnlocked(continuation);
     }
   });
-
-  Blazor._internal.applyHotReload = (id: string, metadataDelta: string, ilDelta: string, pdbDelta: string | undefined) => {
-    DotNet.invokeMethod('Microsoft.AspNetCore.Components.WebAssembly', 'ApplyHotReloadDelta', id, metadataDelta, ilDelta, pdbDelta);
-  };
-
-  Blazor._internal.getApplyUpdateCapabilities = () => DotNet.invokeMethod('Microsoft.AspNetCore.Components.WebAssembly', 'GetApplyUpdateCapabilities');
 
   // Configure JS interop
   Blazor._internal.invokeJSFromDotNet = invokeJSFromDotNet;
@@ -137,7 +131,7 @@ async function boot(options?: Partial<WebAssemblyStartOptions>): Promise<void> {
   platform.callEntryPoint(resourceLoader.bootConfig.entryAssembly);
   // At this point .NET has been initialized (and has yielded), we can't await the promise becasue it will
   // only end when the app finishes running
-  jsInitializer.invokeAfterStartedCallbacks(Blazor);
+  //jsInitializer.invokeAfterStartedCallbacks(Blazor);
 }
 
 function invokeJSFromDotNet(callInfo: Pointer, arg0: any, arg1: any, arg2: any): any {
