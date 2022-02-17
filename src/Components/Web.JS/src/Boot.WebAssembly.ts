@@ -42,12 +42,6 @@ async function boot(options?: Partial<WebAssemblyStartOptions>): Promise<void> {
     }
   });
 
-  Blazor._internal.applyHotReload = (id: string, metadataDelta: string, ilDeta: string) => {
-    DotNet.invokeMethod('Microsoft.AspNetCore.Components.WebAssembly', 'ApplyHotReloadDelta', id, metadataDelta, ilDeta);
-  };
-
-  Blazor._internal.getApplyUpdateCapabilities = () => DotNet.invokeMethod('Microsoft.AspNetCore.Components.WebAssembly', 'GetApplyUpdateCapabilities');
-
   // Configure JS interop
   Blazor._internal.invokeJSFromDotNet = invokeJSFromDotNet;
   Blazor._internal.endInvokeDotNetFromJS = endInvokeDotNetFromJS;
@@ -135,7 +129,7 @@ async function boot(options?: Partial<WebAssemblyStartOptions>): Promise<void> {
   platform.callEntryPoint(resourceLoader.bootConfig.entryAssembly);
   // At this point .NET has been initialized (and has yielded), we can't await the promise becasue it will
   // only end when the app finishes running
-  jsInitializer.invokeAfterStartedCallbacks(Blazor);
+  //jsInitializer.invokeAfterStartedCallbacks(Blazor);
 }
 
 function invokeJSFromDotNet(callInfo: Pointer, arg0: any, arg1: any, arg2: any): any {
