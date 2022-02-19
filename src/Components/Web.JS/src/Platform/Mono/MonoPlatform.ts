@@ -172,7 +172,7 @@ async function importDotnetJs(resourceLoader: WebAssemblyResourceLoader): Promis
     .keys(resourceLoader.bootConfig.resources.runtime)
     .filter(n => n.startsWith('dotnet.') && n.endsWith('.js'))[0];
   const dotnetJsContentHash = resourceLoader.bootConfig.resources.runtime[dotnetJsResourceName];
-  let src = `static/${dotnetJsResourceName}`;
+  let src = `${window['blazorPath']}/${dotnetJsResourceName}`;
 
   // Allow overriding the URI from which the dotnet.*.js file is loaded
   if (resourceLoader.startOptions.loadBootResource) {
@@ -249,11 +249,11 @@ async function createEmscriptenModuleInstance(resourceLoader: WebAssemblyResourc
 
   // Begin loading the .dll/.pdb/.wasm files, but don't block here. Let other loading processes run in parallel.
   const dotnetWasmResourceName = 'dotnet.wasm';
-  const assembliesBeingLoaded = resourceLoader.loadResources(resources.assembly, filename => `static/${filename}`, 'assembly');
-  const pdbsBeingLoaded = resourceLoader.loadResources(resources.pdb || {}, filename => `static/${filename}`, 'pdb');
+  const assembliesBeingLoaded = resourceLoader.loadResources(resources.assembly, filename => `${window['blazorPath']}/${filename}`, 'assembly');
+  const pdbsBeingLoaded = resourceLoader.loadResources(resources.pdb || {}, filename => `${window['blazorPath']}/${filename}`, 'pdb');
   const wasmBeingLoaded = resourceLoader.loadResource(
     /* name */ dotnetWasmResourceName,
-    /* url */  `static/${dotnetWasmResourceName}`,
+    /* url */  `${window['blazorPath']}/${dotnetWasmResourceName}`,
     /* hash */ resourceLoader.bootConfig.resources.runtime[dotnetWasmResourceName],
     /* type */ 'dotnetwasm'
   );
@@ -263,7 +263,7 @@ async function createEmscriptenModuleInstance(resourceLoader: WebAssemblyResourc
   if (resourceLoader.bootConfig.resources.runtime.hasOwnProperty(dotnetTimeZoneResourceName)) {
     timeZoneResource = resourceLoader.loadResource(
       dotnetTimeZoneResourceName,
-      `static/${dotnetTimeZoneResourceName}`,
+      `${window['blazorPath']}/${dotnetTimeZoneResourceName}`,
       resourceLoader.bootConfig.resources.runtime[dotnetTimeZoneResourceName],
       'globalization'
     );
@@ -275,7 +275,7 @@ async function createEmscriptenModuleInstance(resourceLoader: WebAssemblyResourc
     const icuDataResourceName = getICUResourceName(resourceLoader.bootConfig, applicationCulture);
     icuDataResource = resourceLoader.loadResource(
       icuDataResourceName,
-      `static/${icuDataResourceName}`,
+      `${window['blazorPath']}/${icuDataResourceName}`,
       resourceLoader.bootConfig.resources.runtime[icuDataResourceName],
       'globalization'
     );
@@ -340,7 +340,7 @@ async function createEmscriptenModuleInstance(resourceLoader: WebAssemblyResourc
         if (satelliteResources) {
           const resourcePromises = Promise.all(culturesToLoad!
             .filter(culture => satelliteResources.hasOwnProperty(culture))
-            .map(culture => resourceLoader.loadResources(satelliteResources[culture], fileName => `static/${fileName}`, 'assembly'))
+            .map(culture => resourceLoader.loadResources(satelliteResources[culture], fileName => `${window['blazorPath']}/${fileName}`, 'assembly'))
             .reduce((previous, next) => previous.concat(next), new Array<LoadingResource>())
             .map(async resource => (await resource.response).arrayBuffer()));
 
@@ -386,13 +386,13 @@ async function createEmscriptenModuleInstance(resourceLoader: WebAssemblyResourc
           const pdbsToLoad = assembliesMarkedAsLazy.map(a => changeExtension(a, '.pdb'));
           if (pdbs) {
             pdbPromises = Promise.all(pdbsToLoad
-              .map(pdb => lazyAssemblies.hasOwnProperty(pdb) ? resourceLoader.loadResource(pdb, `static/${pdb}`, lazyAssemblies[pdb], 'pdb') : null)
+              .map(pdb => lazyAssemblies.hasOwnProperty(pdb) ? resourceLoader.loadResource(pdb, `${window['blazorPath']}/${pdb}`, lazyAssemblies[pdb], 'pdb') : null)
               .map(async resource => resource ? (await resource.response).arrayBuffer() : null));
           }
         }
 
         const resourcePromises = Promise.all(assembliesMarkedAsLazy
-          .map(assembly => resourceLoader.loadResource(assembly, `static/${assembly}`, lazyAssemblies[assembly], 'assembly'))
+          .map(assembly => resourceLoader.loadResource(assembly, `${window['blazorPath']}/${assembly}`, lazyAssemblies[assembly], 'assembly'))
           .map(async resource => (await resource.response).arrayBuffer()));
 
 

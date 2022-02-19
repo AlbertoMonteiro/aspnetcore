@@ -26,7 +26,7 @@ module.exports = (env, args) => ({
         providedExports: true,
         usedExports: true,
         innerGraph: true,
-        minimize: true,
+        minimize: false,
         minimizer: [new TerserJsPlugin({
             terserOptions: {
                 ecma: 2019,
@@ -42,7 +42,7 @@ module.exports = (env, args) => ({
                 keep_classnames: false,
                 keep_fnames: false,
                 toplevel: true
-          }
+            }
         })]
     },
     plugins: Array.prototype.concat.apply([
